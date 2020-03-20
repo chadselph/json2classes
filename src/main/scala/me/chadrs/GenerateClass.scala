@@ -17,8 +17,8 @@ object GenerateClass {
   
   sealed trait ScalaTypeMapping
   sealed trait CanBeNullable extends ScalaTypeMapping
-  sealed trait CanBeInArray
-  case class Nullable(t: CanBeNullable) extends ScalaTypeMapping with CanBeInArray
+  sealed trait CanBeInArray extends ScalaTypeMapping
+  case class Nullable(t: CanBeNullable) extends ScalaTypeMapping
   case class MapToExisting(t: Type) extends ScalaTypeMapping with CanBeNullable with CanBeInArray {
     override def equals(lhs: Any): Boolean = lhs match {
       case MapToExisting(t2) => t2.toString() == t.toString() // temp hack to make equals work
@@ -27,7 +27,7 @@ object GenerateClass {
   }
   case object Null extends ScalaTypeMapping with CanBeInArray
   case class NewType(fields: MappedFields) extends ScalaTypeMapping with CanBeNullable with CanBeInArray
-  case class ArrayOf(of: ScalaTypeMapping) extends ScalaTypeMapping
+  case class ArrayOf(of: CanBeInArray) extends ScalaTypeMapping
 
   case class ClassToGen(className: Type.Name, params: List[Param]) {
     def generate() = q"""case class $className (..$params)"""
@@ -49,18 +49,16 @@ object GenerateClass {
       case (s, Nullable(nt: NewType)) =>
         val t = Type.Name(s.capitalize)
          newTypeParam(s, nt, t"Option[$t]")
-        //simpleParam(s, t"Option[${s.capitalize}]")
       case (s, Nullable(MapToExisting(t))) => simpleParam(s, t"Option[$t]")
 
       case (s, nt: NewType) =>
         newTypeParam(s, nt, Type.Name(s.capitalize))
 
       case (s, ArrayOf(MapToExisting(t))) => simpleParam(s, t"Vector[$t]")
-      case (s, ArrayOf(Nullable(nt: NewType))) =>
-        newTypeParam(s, nt, t"Vector[Option[${s.capitalize}]]")
-      case (s, ArrayOf(Nullable(MapToExisting(t)))) => simpleParam(s, t"Vector[Option[$t]]")
       case (s, ArrayOf(Null)) => simpleParam(s, t"Vector[Nothing]")
-      case (s, ArrayOf(nt: NewType)) => simpleParam(s, t"Vector[${s.capitalize}]") //TODO: render(nt)
+      case (s, ArrayOf(nt: NewType)) =>
+        val t = Type.Name(s.capitalize)
+        newTypeParam(s, nt, t"Vector[$t]")
     }
     val params = paramsAndNewTypes.map(_._1)
     val newTypes = paramsAndNewTypes.flatMap(_._2)
@@ -91,9 +89,12 @@ object GenerateClass {
   }
 
   def jsonArrayToType(arr: Vector[Json]): Either[String, ScalaTypeMapping] = {
-    if(arr.forall(_.isObject)) unifyObjList(arr.map(_.asObject.get)).map(NewType)
+    if(arr.forall(_.isObject)) unifyObjList(arr.map(_.asObject.get)).map(mfs => ArrayOf(NewType(mfs)))
     else if (arr.isEmpty) Right(Null)
-    else if (isArrayHomogeneous(arr)) jsonTypeToType(arr.head).map(ArrayOf)
+    else if (isArrayHomogeneous(arr)) jsonTypeToType(arr.head).flatMap {
+      case canBeInArray: CanBeInArray => Right(ArrayOf(canBeInArray))
+      case other => Left(s"$other cannot be in an array") // limit what can be in array for sake of simplicity
+    }
     else Left(s"error: Array has different types. ${Json.fromValues(arr).noSpaces}")
   }
 
@@ -173,8 +174,6 @@ object GenerateClass {
         )
       )))
 
-
-    println(render("MyClass", NewType(Vector("test" -> Nullable(NewType(Vector("hi" -> MapToExisting(t"Double"))))))).map(_.generate().syntax))
   }
 
   // TODO: camelCase snake_case conversion
@@ -182,7 +181,6 @@ object GenerateClass {
   // TODO: unit tests
   // TODO: refactor :|
   // TODO: guess number type
-  // TODO: keywords?
   // TODO: settings for which types get mapped
   // TODO: circe encoders / decoders
 

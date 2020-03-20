@@ -1,12 +1,12 @@
-package me.chadrs
+package me.chadrs.json2code
 
-import io.circe.JsonObject
-import io.circe.Json
+import io.circe.{Json, JsonObject}
 
 import scala.meta.Term.Param
+import scala.meta.{Term, Type}
 import scala.meta._
-import cats.implicits._
 
+import cats.implicits._
 
 object GenerateClass {
 
@@ -14,7 +14,7 @@ object GenerateClass {
   object MappedFields {
     val empty: MappedFields = Vector()
   }
-  
+
   sealed trait ScalaTypeMapping
   sealed trait CanBeNullable extends ScalaTypeMapping
   sealed trait CanBeInArray extends ScalaTypeMapping

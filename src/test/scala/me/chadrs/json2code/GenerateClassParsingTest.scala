@@ -108,6 +108,17 @@ class GenerateClassParsingTest extends org.scalatest.funspec.AnyFunSpec with Mat
                 "nest3" -> NewType(Vector(
                   "nest4" -> NumericType)))))))))
       }
+
+      it("should unify two newtypes when one has an empty array") {
+        parseJson("objects" -> Json.arr(
+          Json.obj("projects" -> Json.arr(Json.obj("name" -> Json.fromString("proj1")))),
+          Json.obj("projects" -> Json.arr())
+        )) shouldHaveFields(
+          "objects" -> ArrayOf(NewType(Vector(
+            "projects" -> ArrayOf(NewType(Vector("name" -> StringType)))
+          )))
+        )
+      }
     }
 
     /*

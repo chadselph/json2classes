@@ -964,14 +964,14 @@ class TestWIthWeatherApiTest extends AnyFunSpec with Matchers {
         .map(input => generate("Response", input))
         .fold(_.toString, identity)
       result shouldBe """package com.test
-        |case class Rain(`1h`: BigDecimal)
-        |case class Wind(deg: BigDecimal, speed: BigDecimal)
-        |case class Weather(description: String, icon: String, id: BigDecimal, main: String)
-        |case class Main(feels_like: BigDecimal, humidity: BigDecimal, temp: BigDecimal, temp_max: BigDecimal, temp_min: BigDecimal, pressure: BigDecimal)
-        |case class Sys(country: String)
-        |case class Coord(lat: BigDecimal, lon: BigDecimal)
         |case class Clouds(all: BigDecimal)
-        |case class List(snow: Nothing, name: String, dt: BigDecimal, rain: Option[Rain], wind: Wind, id: BigDecimal, weather: Vector[Weather], main: Main, sys: Sys, coord: Coord, clouds: Clouds)
+        |case class Coord(lat: BigDecimal, lon: BigDecimal)
+        |case class Main(feels_like: BigDecimal, humidity: BigDecimal, pressure: BigDecimal, temp: BigDecimal, temp_max: BigDecimal, temp_min: BigDecimal)
+        |case class Rain(`1h`: BigDecimal)
+        |case class Sys(country: String)
+        |case class Weather(description: String, icon: String, id: BigDecimal, main: String)
+        |case class Wind(deg: BigDecimal, speed: BigDecimal)
+        |case class List(clouds: Clouds, coord: Coord, dt: BigDecimal, id: BigDecimal, main: Main, name: String, rain: Option[Rain], snow: Nothing, sys: Sys, weather: Vector[Weather], wind: Wind)
         |case class Response(cod: String, count: BigDecimal, list: Vector[List], message: String)""".stripMargin
 
 

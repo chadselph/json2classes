@@ -23,7 +23,8 @@ object GenerateClass {
   case object StringType extends JsonTypeTree with CanBeNullable with CanBeInArray with JsonTypeTreeEdge
   case object NumericType extends JsonTypeTree with CanBeNullable with CanBeInArray with JsonTypeTreeEdge
   case object BooleanType extends JsonTypeTree with CanBeNullable with CanBeInArray with JsonTypeTreeEdge
-  case object Null extends JsonTypeTree with CanBeInArray with JsonTypeTreeEdge
+  case object Null extends JsonTypeTree with JsonTypeTreeEdge
+  case object EmptyArray extends JsonTypeTree
   case class NewType(fields: MappedFields) extends JsonTypeTree with CanBeNullable with CanBeInArray
   case class ArrayOf(of: CanBeInArray) extends JsonTypeTree
 
@@ -52,7 +53,6 @@ object GenerateClass {
       case (s, nt: NewType) =>
         newTypeParam(s, nt, Type.Name(s.capitalize))
 
-      case (s, Null) => simpleParam(s, t"Nothing")
       case (s, Nullable(nt: NewType)) =>
         val t = Type.Name(s.capitalize)
          newTypeParam(s, nt, t"Option[$t]")
@@ -63,6 +63,9 @@ object GenerateClass {
       case (s, ArrayOf(nt: NewType)) =>
         val t = Type.Name(s.capitalize)
         newTypeParam(s, nt, settings.arrayType(t))
+      case (s, EmptyArray) =>
+        val t = t"Nothing"
+        simpleParam(s, settings.arrayType(t))
     }
     val params = paramsAndNewTypes.map(_._1)
     val newTypes = paramsAndNewTypes.flatMap(_._2)
@@ -93,8 +96,8 @@ object GenerateClass {
   }
 
   def jsonArrayToType(arr: Vector[Json]): Either[String, JsonTypeTree] = {
-    if(arr.forall(_.isObject)) unifyObjList(arr.map(_.asObject.get)).map(mfs => ArrayOf(NewType(mfs)))
-    else if (arr.isEmpty) Right(Null)
+    if (arr.isEmpty) Right(EmptyArray)
+    else if(arr.forall(_.isObject)) unifyObjList(arr.map(_.asObject.get)).map(mfs => ArrayOf(NewType(mfs)))
     else if (isArrayHomogeneous(arr)) jsonTypeToType(arr.head).flatMap {
       case canBeInArray: CanBeInArray => Right(ArrayOf(canBeInArray))
       case other => Left(s"$other cannot be in an array") // limit what can be in array for sake of simplicity
@@ -103,7 +106,7 @@ object GenerateClass {
   }
 
   def jsonObjToNewType(obj: JsonObject): Either[String, NewType] = {
-    val keysWithTypes = obj.toMap.toVector.map { case (key, value) => jsonTypeToType(value).map(key -> _) }.sequence
+    val keysWithTypes = obj.toVector.map { case (key, value) => jsonTypeToType(value).map(key -> _) }.sequence
     keysWithTypes.map(NewType)
   }
 
@@ -148,6 +151,8 @@ object GenerateClass {
       case (Null, cbn: CanBeNullable) => Right(Nullable(cbn))
       case (cbn: CanBeNullable, Null) => Right(Nullable(cbn))
       case (NewType(aFields), NewType(bFields)) => unifyNewTypes(aFields, bFields).map(NewType)
+      case (EmptyArray, ArrayOf(a)) => Right(ArrayOf(a))
+      case (ArrayOf(a), EmptyArray) => Right(ArrayOf(a))
       // TODO: Arrays?
       case _ => Left(s"Can't unify $a and $b yet.")
     }
@@ -173,7 +178,6 @@ object GenerateClass {
                             packageName: String = "com.test")
 
   // TODO: camelCase snake_case conversion
-  // TODO: scalajs-ify
   // TODO: refactor :|
   // TODO: settings for which types get mapped, unify numbers/strings
   // TODO: circe encoders / decoders

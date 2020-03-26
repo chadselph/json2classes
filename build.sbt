@@ -8,6 +8,7 @@ val circeVersion = "0.12.3"
 
 
 libraryDependencies += "org.scalameta" %% "scalameta" % "4.3.4"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1" % "test"
 
 libraryDependencies ++= Seq(
   "io.circe" %% "circe-core",

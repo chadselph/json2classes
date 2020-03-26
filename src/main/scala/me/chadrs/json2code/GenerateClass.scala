@@ -5,29 +5,27 @@ import io.circe.{Json, JsonObject}
 import scala.meta.Term.Param
 import scala.meta.{Term, Type}
 import scala.meta._
-
 import cats.implicits._
 
 object GenerateClass {
 
-  type MappedFields = Vector[(String, ScalaTypeMapping)]
+  type MappedFields = Vector[(String, JsonTypeTree)]
   object MappedFields {
     val empty: MappedFields = Vector()
+    def apply(fields: (String, JsonTypeTree)*): MappedFields = fields.toVector
   }
 
-  sealed trait ScalaTypeMapping
-  sealed trait CanBeNullable extends ScalaTypeMapping
-  sealed trait CanBeInArray extends ScalaTypeMapping
-  case class Nullable(t: CanBeNullable) extends ScalaTypeMapping
-  case class MapToExisting(t: Type) extends ScalaTypeMapping with CanBeNullable with CanBeInArray {
-    override def equals(lhs: Any): Boolean = lhs match {
-      case MapToExisting(t2) => t2.toString() == t.toString() // temp hack to make equals work
-      case _ => false
-    }
-  }
-  case object Null extends ScalaTypeMapping with CanBeInArray
-  case class NewType(fields: MappedFields) extends ScalaTypeMapping with CanBeNullable with CanBeInArray
-  case class ArrayOf(of: CanBeInArray) extends ScalaTypeMapping
+  sealed trait JsonTypeTree
+  sealed trait CanBeNullable extends JsonTypeTree
+  sealed trait CanBeInArray extends JsonTypeTree
+  sealed trait JsonTypeTreeEdge extends JsonTypeTree
+  case class Nullable(t: CanBeNullable) extends JsonTypeTree
+  case object StringType extends JsonTypeTree with CanBeNullable with CanBeInArray with JsonTypeTreeEdge
+  case object NumericType extends JsonTypeTree with CanBeNullable with CanBeInArray with JsonTypeTreeEdge
+  case object BooleanType extends JsonTypeTree with CanBeNullable with CanBeInArray with JsonTypeTreeEdge
+  case object Null extends JsonTypeTree with CanBeInArray with JsonTypeTreeEdge
+  case class NewType(fields: MappedFields) extends JsonTypeTree with CanBeNullable with CanBeInArray
+  case class ArrayOf(of: CanBeInArray) extends JsonTypeTree
 
   case class ClassToGen(className: Type.Name, params: List[Param]) {
     def generate() = q"""case class $className (..$params)"""
@@ -37,28 +35,34 @@ object GenerateClass {
     jsonObjToNewType(input)
   }
 
-  def render(topLevelName: String, newType: NewType): Vector[ClassToGen] = {
+  def render(topLevelName: String, newType: NewType, settings: RenderSettings): Vector[ClassToGen] = {
     def simpleParam(name: String, t: Type) =
       (Param(Nil, Term.Name(name), Some(t), None), Vector.empty)
     def newTypeParam(name: String, nt: NewType, t: Type) =
-      (Param(Nil, Term.Name(name), Some(t), None), render(name.capitalize, nt))
+      (Param(Nil, Term.Name(name), Some(t), None), render(name.capitalize, nt, settings))
+    def edgeToType(edge: JsonTypeTreeEdge): Type = edge match {
+      case StringType => settings.stringType
+      case NumericType => settings.numericType
+      case BooleanType => settings.booleanType
+      case Null => t"Nothing"
+    }
 
     val paramsAndNewTypes: Vector[(Param, Vector[ClassToGen])] = newType.fields.map {
-      case (s, MapToExisting(t)) => simpleParam(s, t)
+      case (s, edge: JsonTypeTreeEdge) => simpleParam(s, edgeToType(edge))
+      case (s, nt: NewType) =>
+        newTypeParam(s, nt, Type.Name(s.capitalize))
+
       case (s, Null) => simpleParam(s, t"Nothing")
       case (s, Nullable(nt: NewType)) =>
         val t = Type.Name(s.capitalize)
          newTypeParam(s, nt, t"Option[$t]")
-      case (s, Nullable(MapToExisting(t))) => simpleParam(s, t"Option[$t]")
+      case (s, Nullable(t: JsonTypeTreeEdge)) => simpleParam(s, t"Option[${edgeToType(t)}]")
 
-      case (s, nt: NewType) =>
-        newTypeParam(s, nt, Type.Name(s.capitalize))
-
-      case (s, ArrayOf(MapToExisting(t))) => simpleParam(s, t"Vector[$t]")
-      case (s, ArrayOf(Null)) => simpleParam(s, t"Vector[Nothing]")
+      case (s, ArrayOf(edge: JsonTypeTreeEdge with CanBeInArray)) =>
+        simpleParam(s, settings.arrayType(edgeToType(edge)))
       case (s, ArrayOf(nt: NewType)) =>
         val t = Type.Name(s.capitalize)
-        newTypeParam(s, nt, t"Vector[$t]")
+        newTypeParam(s, nt, settings.arrayType(t))
     }
     val params = paramsAndNewTypes.map(_._1)
     val newTypes = paramsAndNewTypes.flatMap(_._2)
@@ -77,18 +81,18 @@ object GenerateClass {
         _ => arr.forall(_.isObject))
     )
 
-  def jsonTypeToType(item: Json): Either[String, ScalaTypeMapping] = {
+  def jsonTypeToType(item: Json): Either[String, JsonTypeTree] = {
     item.fold(
       Right(Null),
-      _ => Right(MapToExisting(t"Boolean")),
-      _ => Right(MapToExisting(t"Double")),
-      _ => Right(MapToExisting(t"String")),
+      _ => Right(BooleanType),
+      _ => Right(NumericType),
+      _ => Right(StringType),
       jsonArrayToType,
       jsonObjToNewType
     )
   }
 
-  def jsonArrayToType(arr: Vector[Json]): Either[String, ScalaTypeMapping] = {
+  def jsonArrayToType(arr: Vector[Json]): Either[String, JsonTypeTree] = {
     if(arr.forall(_.isObject)) unifyObjList(arr.map(_.asObject.get)).map(mfs => ArrayOf(NewType(mfs)))
     else if (arr.isEmpty) Right(Null)
     else if (isArrayHomogeneous(arr)) jsonTypeToType(arr.head).flatMap {
@@ -122,15 +126,15 @@ object GenerateClass {
     val newKeys = objMap.keySet -- a.view.map(_._1).to(Set)
     val unifiedParams = a.map { case (key, existingType) =>
       val thisType = objMap.getOrElse(key, Null)
-      unifyTypes(thisType, existingType).map(key -> _)
+      unifyTypes(existingType, thisType).map(key -> _)
     }.sequence
     // any param being introduced here is optional so unify it with Null
     val newParams = newKeys.toVector.map(key => unifyTypes(Null, objMap(key)).map(key -> _)).sequence
     unifiedParams |+| newParams
   }
 
-  def unifyTypes(a: ScalaTypeMapping, b: ScalaTypeMapping): Either[String, ScalaTypeMapping] = {
-    def nullify(stm: ScalaTypeMapping): ScalaTypeMapping = stm match {
+  def unifyTypes(a: JsonTypeTree, b: JsonTypeTree): Either[String, JsonTypeTree] = {
+    def nullify(stm: JsonTypeTree): JsonTypeTree = stm match {
       case s: CanBeNullable => Nullable(s)
       case _ => stm // shouldn't ever get here
     }
@@ -144,6 +148,7 @@ object GenerateClass {
       case (Null, cbn: CanBeNullable) => Right(Nullable(cbn))
       case (cbn: CanBeNullable, Null) => Right(Nullable(cbn))
       case (NewType(aFields), NewType(bFields)) => unifyNewTypes(aFields, bFields).map(NewType)
+      // TODO: Arrays?
       case _ => Left(s"Can't unify $a and $b yet.")
     }
 
@@ -151,37 +156,28 @@ object GenerateClass {
 
   def generate(className: String, input: JsonObject): String = {
     parse(input, className).fold(identity, { nt =>
-      val classes = render(className, nt)
+      val classes = render(className, nt, RenderSettings())
       q"""package com.test {
           ..${classes.toList.map(_.generate())}
            }""".syntax
     })
   }
 
-  def main(args: Array[String]): Unit = {
-    println(generate(
-      "SomeClass", JsonObject(
-        "name" -> Json.fromString("chad"),
-        "integer" -> Json.fromInt(123),
-        "arr" -> Json.arr(Json.fromInt(10), Json.fromInt(40)),
-        "nested" -> Json.obj("field4" -> Json.fromInt(13), "field2" -> Json.obj("field22" -> Json.obj("field33" -> Json.fromInt(9)))),
-        "arrOfObj" -> Json.arr(
-          Json.obj("kittens" -> Json.fromInt(5), "puppies" -> Json.fromInt(10)),
-          Json.obj("kittens" -> Json.Null, "puppies" -> Json.fromInt(101)),
-          Json.obj("puppies" -> Json.fromInt(40)),
-          Json.obj("puppies" -> Json.fromInt(40), "type" -> Json.obj("cubType" -> Json.fromString("bear"))),
-          Json.obj("puppies" -> Json.fromInt(40), "type" -> Json.obj("cubType" -> Json.fromString("tiger"), "count" -> Json.fromInt(4))),
-        )
-      )))
-
-  }
+  case class RenderSettings(stringType: Type = t"String",
+                            booleanType: Type = t"Boolean",
+                            numericType: Type = t"BigDecimal",
+                            arrayType: Type => Type = (t: Type) => t"Vector[$t]",
+                            fieldNameFormatter: String => String = identity,
+                            generateCirceDecoders: Boolean = false,
+                            generateCirceEncoders: Boolean = false,
+                            packageName: String = "com.test")
 
   // TODO: camelCase snake_case conversion
   // TODO: scalajs-ify
-  // TODO: unit tests
   // TODO: refactor :|
-  // TODO: guess number type
-  // TODO: settings for which types get mapped
+  // TODO: settings for which types get mapped, unify numbers/strings
   // TODO: circe encoders / decoders
+  // TODO: empty object {}
+  // TODO: unify arbitrary depth
 
 }

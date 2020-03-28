@@ -71,7 +71,6 @@ object GenerateClass {
   // TODO: camelCase snake_case conversion
   // TODO: settings for which types get mapped, unify numbers/strings
   // TODO: circe encoders / decoders
-  // TODO: empty object {}
   // TODO: unify arbitrary depth?
 
 }

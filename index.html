@@ -9,11 +9,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/ext-static_highlight.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/mode-json.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/theme-eclipse.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/mode-scala.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/ext-language_tools.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/theme-tomorrow_night_eighties.js"></script>
     <style>
-    #editor {
+    #editor, #output {
         position: relative;
         top: 0;
         right: 0;
@@ -84,7 +83,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">Scala Output</div>
                 <div class="panel-body">
-                    <code id="output">scalaaaa</code>
+                    <div id="output"></div>
                 </div>
             </div>
         </div>
@@ -98,17 +97,23 @@
     function update() {
       var json = editor.getSession().getValue();
       try {
-          var output = convert(json);
-      document.getElementById("output").innerText = output;
+          var code = convert(json);
+          output.getSession().setValue(code);
       } catch (ex) {}
     }
 
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/monokai");
     editor.session.setMode("ace/mode/json");
+    editor.getSession().setUseWrapMode(true);
     editor.getSession().on('change', function () {
         update();
     });
+    var output = ace.edit("output");
+    output.setTheme("ace/theme/monokai");
+    output.session.setMode("ace/mode/scala");
+    output.getSession().setUseWrapMode(true);
+    output.setReadOnly(true);
     update();
 </script>
 </body>

@@ -1,7 +1,9 @@
 package me.chadrs.json2code
 
 import me.chadrs.json2code.GenerateClass._
+import me.chadrs.json2code.JsonTypeTree._
 import org.scalatest.matchers.should.Matchers
+
 import scala.meta._
 
 

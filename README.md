@@ -1,5 +1,7 @@
 Simple proof of concept converting JSON data into case classes.
 
+[Demo](https://chadselph.github.io/json2classes/)
+
 Literally just brainstorming as I code so it's a total mess still.
 
 Does best effort for unifying json types... i.e. ```

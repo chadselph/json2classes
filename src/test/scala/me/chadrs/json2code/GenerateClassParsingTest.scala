@@ -1,14 +1,14 @@
 package me.chadrs.json2code
 
 import io.circe.{Json, JsonObject}
-import me.chadrs.json2code.GenerateClass.{ArrayOf, BooleanType, JsonTypeTree, NewType, Null, Nullable, NumericType, StringType}
+import me.chadrs.json2code.JsonTypeTree.{ArrayOf, BooleanType, NewType, Null, Nullable, NumericType, StringType}
 import org.scalatest.Assertion
 import org.scalatest.matchers.should.Matchers
 
 
 class GenerateClassParsingTest extends org.scalatest.funspec.AnyFunSpec with Matchers {
 
-  protected def parseJson(json: (String, Json)*): Either[String, NewType] = GenerateClass.parse(JsonObject(json: _*), "MyClass")
+  protected def parseJson(json: (String, Json)*): Either[String, NewType] = JsonTypeTree.parse(JsonObject(json: _*), "MyClass")
 
   protected implicit class ParseResultShouldHelpers(val result: Either[String, NewType]) {
     def shouldHaveFields(fields: (String, JsonTypeTree)*): Assertion = {

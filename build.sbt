@@ -21,3 +21,4 @@ libraryDependencies ++= Seq(
   "io.circe" %%% "circe-parser"
 ).map(_ % circeVersion)
 
+libraryDependencies += "org.scalablytyped" %%% "ace" %  "0.0-unknown-dt-20190322Z-2f839f"

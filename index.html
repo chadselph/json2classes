@@ -93,28 +93,5 @@
 
 <!-- Include Scala.js compiled code -->
 <script type="text/javascript" src="./target/scala-2.13/json2classes-fastopt.js"></script>
-<script>
-    function update() {
-      var json = editor.getSession().getValue();
-      try {
-          var code = convert(json);
-          output.getSession().setValue(code);
-      } catch (ex) {}
-    }
-
-    var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/monokai");
-    editor.session.setMode("ace/mode/json");
-    editor.getSession().setUseWrapMode(true);
-    editor.getSession().on('change', function () {
-        update();
-    });
-    var output = ace.edit("output");
-    output.setTheme("ace/theme/monokai");
-    output.session.setMode("ace/mode/scala");
-    output.getSession().setUseWrapMode(true);
-    output.setReadOnly(true);
-    update();
-</script>
 </body>
 </html>

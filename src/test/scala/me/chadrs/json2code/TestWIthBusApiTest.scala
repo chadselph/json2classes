@@ -66,9 +66,9 @@ class TestWIthBusApiTest extends AnyFunSpec with Matchers {
 
       val result = parse(busJson)
         .flatMap(_.as[JsonObject])
-        .map(input => generate("Response", input))
+        .flatMap(input => generate("Response", input))
         .fold(_.toString, identity)
-      result shouldBe """package com.test
+      result shouldBe """package com.example
         |case class Predictions(delayed: Option[Boolean], departure: Boolean, min: BigDecimal, sec: BigDecimal, time: BigDecimal, tripId: String, vehicleId: String)
         |case class Destinations(directionId: String, predictions: Vector[Predictions])
         |case class PredictionsData(destinations: Vector[Destinations], routeId: String, routeName: String, routeShortName: String, stopCode: BigDecimal, stopId: String, stopName: String)

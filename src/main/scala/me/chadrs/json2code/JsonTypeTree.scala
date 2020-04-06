@@ -67,11 +67,13 @@ object JsonTypeTree {
       case canBeInArray: CanBeInArray => Right(ArrayOf(canBeInArray))
       case other => Left(s"${other.show} cannot be in an array") // limit what can be in array for sake of simplicity
     }
-    else Left(s"error: Array has different types. ${Json.fromValues(arr).noSpaces}")
+    else Left(s"Array has different types. ${Json.fromValues(arr).noSpaces}")
   }
 
   def jsonObjToNewType(obj: JsonObject): Either[String, NewType] = {
-    val keysWithTypes = obj.toVector.map { case (key, value) => jsonTypeToType(value).map(key -> _) }.sequence
+    val keysWithTypes = obj.toVector.map {
+      case (key, _) if key.isEmpty => Left("JSON keys cannot be empty")
+      case (key, value) => jsonTypeToType(value).map(key -> _) }.sequence
     keysWithTypes.map(NewType)
   }
 

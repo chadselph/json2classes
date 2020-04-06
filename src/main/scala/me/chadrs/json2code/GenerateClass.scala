@@ -51,26 +51,29 @@ object GenerateClass {
     newTypes :+ ClassToGen(Type.Name(topLevelName), params.toList)
   }
 
-  def generate(className: String, input: JsonObject): String = {
-    parse(input, className).fold(identity, { nt =>
-      val classes = render(className, nt, RenderSettings())
-      q"""package com.test {
+  def generate(className: String, input: JsonObject, renderSettings: RenderSettings = RenderSettings()): Either[String, String] = {
+    parse(input, className).map { nt =>
+      val classes = render(className, nt, renderSettings)
+      val packageTerm = renderSettings.packageName.split('.').map(Term.Name.apply).reduceLeft(Term.Select.apply)
+      q"""package $packageTerm {
           ..${classes.toList.map(_.generate())}
            }""".syntax
-    })
+    }
   }
 
   case class RenderSettings(stringType: Type = t"String",
                             booleanType: Type = t"Boolean",
                             numericType: Type = t"BigDecimal",
-                            arrayType: Type => Type = (t: Type) => t"Vector[$t]",
+                            arrayType: Type => Type = RenderSettings.vectorOf,
                             fieldNameFormatter: String => String = RenderSettings.snakeToCamel,
                             classNameFormatter: String => String = RenderSettings.snakeToPascal,
                             generateCirceDecoders: Boolean = false,
                             generateCirceEncoders: Boolean = false,
-                            packageName: String = "com.test")
+                            packageName: String = "com.example")
 
   object RenderSettings {
+
+    val vectorOf: Type => Type = (t: Type) => t"Vector[$t]"
 
     val snakeToCamel: String => String = (input) => {
       val parts = input.split("_")

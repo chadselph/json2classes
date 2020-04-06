@@ -6,42 +6,47 @@ import cats.implicits._
 import typings.ace.AceAjax.Editor
 import typings.ace.ace
 
-import scala.scalajs.js.annotation.JSExportTopLevel
 
 object Webapp {
 
   def main(args: Array[String]): Unit = {
 
     val jsonEditor = ace.edit("editor")
-    val output = ace.edit("output")
-
-    def showOutput(): Unit = transform(jsonEditor, output, convert)
-
     jsonEditor.setTheme("ace/theme/monokai")
     jsonEditor.session.setMode("ace/mode/json")
     jsonEditor.getSession().setUseWrapMode(true)
+    val output = ace.edit("output")
+    output.setTheme("ace/theme/monokai")
+    output.getSession().setUseWrapMode(true)
+    output.setReadOnly(true)
+
+    def showOutput(): Unit = transform(jsonEditor, output, convert)
     jsonEditor
       .getSession()
       .on("change", _ => showOutput())
-    output.setTheme("ace/theme/monokai")
-    output.session.setMode("ace/mode/scala")
-    output.getSession().setUseWrapMode(true)
-    output.setReadOnly(true)
     showOutput()
   }
 
   def transform(input: Editor,
                 output: Editor,
-                transform: String => String): Unit = {
-    output.session.setValue(transform(input.session.getValue()))
+                transform: String => Either[String, String]): Unit = {
+    output.session.setValue(
+      transform(input.session.getValue()) match {
+        case Left(errorMsg) =>
+          output.session.setMode("ace/mode/text")
+          "error: " + errorMsg
+        case Right(scalaCode) =>
+          output.session.setMode("ace/mode/scala")
+          scalaCode
+      }
+    )
   }
 
-  def convert(input: String): String = {
+  def convert(input: String): Either[String, String] = {
     parse(input)
       .flatMap(_.as[JsonObject])
       .leftMap(_.toString)
-      .map(obj => generate("Response", obj))
-      .fold("error: " + _, identity)
+      .flatMap(obj => generate("Response", obj))
   }
 
 }

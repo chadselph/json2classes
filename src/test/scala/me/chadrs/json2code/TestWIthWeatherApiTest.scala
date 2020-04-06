@@ -961,12 +961,12 @@ class TestWIthWeatherApiTest extends AnyFunSpec with Matchers {
 
       val result = parse(weatherJson)
         .flatMap(_.as[JsonObject])
-        .map(input => generate("Response", input))
+        .flatMap(input => generate("Response", input))
         .fold(_.toString, identity)
-      result shouldBe """package com.test
+      result shouldBe """package com.example
         |case class Clouds(all: BigDecimal)
         |case class Coord(lat: BigDecimal, lon: BigDecimal)
-        |case class Main(feels_like: BigDecimal, humidity: BigDecimal, pressure: BigDecimal, temp: BigDecimal, temp_max: BigDecimal, temp_min: BigDecimal)
+        |case class Main(feelsLike: BigDecimal, humidity: BigDecimal, pressure: BigDecimal, temp: BigDecimal, tempMax: BigDecimal, tempMin: BigDecimal)
         |case class Rain(`1h`: BigDecimal)
         |case class Sys(country: String)
         |case class Weather(description: String, icon: String, id: BigDecimal, main: String)

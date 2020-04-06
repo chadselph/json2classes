@@ -14,10 +14,11 @@ object GenerateClass {
   }
 
   def render(topLevelName: String, newType: NewType, settings: RenderSettings): Vector[ClassToGen] = {
+    def fieldName(s: String) = Term.Name(settings.fieldNameFormatter(s))
     def simpleParam(name: String, t: Type) =
-      (Param(Nil, Term.Name(name), Some(t), None), Vector.empty)
+      (Param(Nil, fieldName(name), Some(t), None), Vector.empty)
     def newTypeParam(name: String, nt: NewType, t: Type) =
-      (Param(Nil, Term.Name(name), Some(t), None), render(name.capitalize, nt, settings))
+      (Param(Nil, fieldName(name), Some(t), None), render(settings.classNameFormatter(name), nt, settings))
     def edgeToType(edge: JsonTypeTreeEdge): Type = edge match {
       case StringType => settings.stringType
       case NumericType => settings.numericType
@@ -28,17 +29,17 @@ object GenerateClass {
     val paramsAndNewTypes: Vector[(Param, Vector[ClassToGen])] = newType.fields.map {
       case (s, edge: JsonTypeTreeEdge) => simpleParam(s, edgeToType(edge))
       case (s, nt: NewType) =>
-        newTypeParam(s, nt, Type.Name(s.capitalize))
+        newTypeParam(s, nt, Type.Name(settings.classNameFormatter(s)))
 
       case (s, Nullable(nt: NewType)) =>
-        val t = Type.Name(s.capitalize)
+        val t = Type.Name(settings.classNameFormatter(s))
         newTypeParam(s, nt, t"Option[$t]")
       case (s, Nullable(t: JsonTypeTreeEdge)) => simpleParam(s, t"Option[${edgeToType(t)}]")
 
       case (s, ArrayOf(edge: JsonTypeTreeEdge with CanBeInArray)) =>
         simpleParam(s, settings.arrayType(edgeToType(edge)))
       case (s, ArrayOf(nt: NewType)) =>
-        val t = Type.Name(s.capitalize)
+        val t = Type.Name(settings.classNameFormatter(s))
         newTypeParam(s, nt, settings.arrayType(t))
       case (s, EmptyArray) =>
         val t = t"Nothing"
@@ -63,14 +64,23 @@ object GenerateClass {
                             booleanType: Type = t"Boolean",
                             numericType: Type = t"BigDecimal",
                             arrayType: Type => Type = (t: Type) => t"Vector[$t]",
-                            fieldNameFormatter: String => String = identity,
+                            fieldNameFormatter: String => String = RenderSettings.snakeToCamel,
+                            classNameFormatter: String => String = RenderSettings.snakeToPascal,
                             generateCirceDecoders: Boolean = false,
                             generateCirceEncoders: Boolean = false,
                             packageName: String = "com.test")
 
-  // TODO: camelCase snake_case conversion
-  // TODO: settings for which types get mapped, unify numbers/strings
+  object RenderSettings {
+
+    val snakeToCamel: String => String = (input) => {
+      val parts = input.split("_")
+      parts.head + parts.tail.map(_.capitalize).mkString
+    }
+    val snakeToPascal: String => String = (input) => {
+      input.split("_").map(_.capitalize).mkString
+    }
+  }
+
   // TODO: circe encoders / decoders
-  // TODO: unify arbitrary depth?
 
 }

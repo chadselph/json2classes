@@ -1,7 +1,8 @@
 package me.chadrs.json2code
+
 import io.circe.JsonObject
 import io.circe.parser.parse
-import me.chadrs.json2code.GenerateClass.generate
+import me.chadrs.json2code.GenerateClass.{RenderSettings, generate}
 import cats.implicits._
 import typings.ace.AceAjax.Editor
 import typings.ace.ace
@@ -21,6 +22,7 @@ object Webapp {
     output.setReadOnly(true)
 
     def showOutput(): Unit = transform(jsonEditor, output, convert)
+
     jsonEditor
       .getSession()
       .on("change", _ => showOutput())
@@ -43,10 +45,11 @@ object Webapp {
   }
 
   def convert(input: String): Either[String, String] = {
+    val settings = RenderSettings(generateCirceDecoders = true)
     parse(input)
       .flatMap(_.as[JsonObject])
       .leftMap(_.toString)
-      .flatMap(obj => generate("Response", obj))
+      .flatMap(obj => generate("Response", obj, settings))
   }
 
 }

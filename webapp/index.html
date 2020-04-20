@@ -30,6 +30,14 @@
     <div class="row">
         <div class="col-md6 col-md-offset-2">
             Convert random JSON into Scala case classes.
+            <div>
+                <input id="encoders" type="checkbox" />
+                <label for="encoders">Generate encoders</label>
+            </div>
+            <div>
+                <input id="decoders" type="checkbox" />
+                <label for="decoders">Generate decoders</label>
+            </div>
         </div>
     </div>
     <div class="row">
@@ -92,6 +100,6 @@
 
 
 <!-- Include Scala.js compiled code -->
-<script type="text/javascript" src="./target/scala-2.13/json2classes-fastopt.js"></script>
+<script type="text/javascript" src="./target/scala-2.13/json2classes-webapp-fastopt.js"></script>
 </body>
 </html>

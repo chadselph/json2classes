@@ -1,9 +1,9 @@
 package me.chadrs.json2code
 
+import cats.implicits._
 import io.circe.JsonObject
 import io.circe.parser.parse
 import me.chadrs.json2code.GenerateClass.{RenderSettings, generate}
-import cats.implicits._
 import typings.ace.AceAjax.Editor
 import typings.ace.ace
 

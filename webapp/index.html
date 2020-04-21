@@ -30,14 +30,8 @@
     <div class="row">
         <div class="col-md6 col-md-offset-2">
             Convert random JSON into Scala case classes.
-            <div>
-                <input id="encoders" type="checkbox" />
-                <label for="encoders">Generate encoders</label>
-            </div>
-            <div>
-                <input id="decoders" type="checkbox" />
-                <label for="decoders">Generate decoders</label>
-            </div>
+            <span id="checkboxes"></span>
+
         </div>
     </div>
     <div class="row">
@@ -45,47 +39,9 @@
             <div class="panel panel-default">
                 <div class="panel-heading">JSON Input</div>
                 <div class="panel-body">
-                    <div id="editor">{
-    "name": "chad",
-    "age": 100,
-    "languages": [
-         {
-             "name": "scala",
-             "years": 6,
-             "functional": true,
-             "projects": ["json2classes", "akka-smpp"]
-
-         }, {
-             "name": "elm",
-             "years": 2,
-             "functional": true,
-             "projects": ["elm-yahtzee"]
-         }, {
-             "name": "python",
-             "years": 6,
-             "functional": false,
-             "projects": []
-         }
-    ],
-    "favoritePlayers": [
-         {
-             "name": "Naomi Osaka",
-             "lastGrandSlam": {
-                 "tournament": "Australian Open",
-                 "year": 2019
-
-             }
-         },{
-             "name": "Nick Kyrgios",
-             "lastGrandSlam": null
-
-         }
-    ]
-}</div>
+                    <div id="editor"></div>
                 </div>
             </div>
-
-
         </div>
         <div class="col-md-5">
             <div class="panel panel-default">

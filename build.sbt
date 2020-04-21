@@ -33,6 +33,8 @@ lazy val webapp = (project in file("webapp"))
     scalaVersion := scalaV,
     scalaJSUseMainModuleInitializer := true,
     libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.0.0",
-    libraryDependencies += "org.scalablytyped" %%% "ace" % "0.0-unknown-dt-20190322Z-2f839f"
+    libraryDependencies += "in.nvilla" %%% "monadic-html" % "0.4.0",
+      libraryDependencies += "org.scalablytyped" %%% "ace" % "0.0-unknown-dt-20190322Z-2f839f",
+    scalacOptions := Seq("-Ymacro-annotations")
   )
   .enablePlugins(ScalaJSPlugin)

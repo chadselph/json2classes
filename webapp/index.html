@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>The Scala.js Tutorial</title>
+    <title>JSON to case classes</title>
 
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
@@ -30,6 +30,8 @@
     <div class="row">
         <div class="col-md6 col-md-offset-2">
             Convert random JSON into Scala case classes.
+            <span id="checkboxes"></span>
+
         </div>
     </div>
     <div class="row">
@@ -37,47 +39,9 @@
             <div class="panel panel-default">
                 <div class="panel-heading">JSON Input</div>
                 <div class="panel-body">
-                    <div id="editor">{
-    "name": "chad",
-    "age": 100,
-    "languages": [
-         {
-             "name": "scala",
-             "years": 6,
-             "functional": true,
-             "projects": ["json2classes", "akka-smpp"]
-
-         }, {
-             "name": "elm",
-             "years": 2,
-             "functional": true,
-             "projects": ["elm-yahtzee"]
-         }, {
-             "name": "python",
-             "years": 6,
-             "functional": false,
-             "projects": []
-         }
-    ],
-    "favoritePlayers": [
-         {
-             "name": "Naomi Osaka",
-             "lastGrandSlam": {
-                 "tournament": "Australian Open",
-                 "year": 2019
-
-             }
-         },{
-             "name": "Nick Kyrgios",
-             "lastGrandSlam": null
-
-         }
-    ]
-}</div>
+                    <div id="editor"></div>
                 </div>
             </div>
-
-
         </div>
         <div class="col-md-5">
             <div class="panel panel-default">
@@ -92,29 +56,6 @@
 
 
 <!-- Include Scala.js compiled code -->
-<script type="text/javascript" src="./target/scala-2.13/json2classes-fastopt.js"></script>
-<script>
-    function update() {
-      var json = editor.getSession().getValue();
-      try {
-          var code = convert(json);
-          output.getSession().setValue(code);
-      } catch (ex) {}
-    }
-
-    var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/monokai");
-    editor.session.setMode("ace/mode/json");
-    editor.getSession().setUseWrapMode(true);
-    editor.getSession().on('change', function () {
-        update();
-    });
-    var output = ace.edit("output");
-    output.setTheme("ace/theme/monokai");
-    output.session.setMode("ace/mode/scala");
-    output.getSession().setUseWrapMode(true);
-    output.setReadOnly(true);
-    update();
-</script>
+<script type="text/javascript" src="./target/scala-2.13/json2classes-webapp-fastopt.js"></script>
 </body>
 </html>
